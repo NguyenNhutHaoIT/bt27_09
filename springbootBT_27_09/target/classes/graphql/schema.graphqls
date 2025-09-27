@@ -1,0 +1,51 @@
+type User {
+    id: ID!
+    fullname: String
+    email: String
+    password: String
+    phone: String
+    categories: [Category]
+}
+
+type Product {
+    id: ID!
+    title: String
+    quantity: Int
+    desc: String
+    price: Float
+    user: User
+    categories: [Category]
+}
+
+type Category {
+    id: ID!
+    name: String
+    images: String
+    users: [User]
+    products: [Product]
+}
+
+# -------- QUERIES --------
+type Query {
+    sanPhamTheoGiaTangDan: [Product]
+    sanPhamTheoDanhMuc(danhMucId: ID!): [Product]
+    tatCaProduct: [Product]
+    tatCaUser: [User]
+    tatCaCategory: [Category]
+    layUser(id: ID!): User
+}
+
+# -------- MUTATIONS --------
+type Mutation {
+    taoUser(fullname: String!, email: String!, password: String, phone: String, categoryIds: [ID]): User
+    capNhatUser(id: ID!, fullname: String, email: String, password: String, phone: String, categoryIds: [ID]): User
+    xoaUser(id: ID!): Boolean
+
+    taoCategory(name: String!, images: String, productIds: [ID]): Category
+    capNhatCategory(id: ID!, name: String, images: String, productIds: [ID]): Category
+    xoaCategory(id: ID!): Boolean
+
+    taoProduct(title: String!, quantity: Int, desc: String, price: Float, userId: ID, categoryIds: [ID]): Product
+    capNhatProduct(id: ID!, title: String, quantity: Int, desc: String, price: Float, userId: ID, categoryIds: [ID]): Product
+    xoaProduct(id: ID!): Boolean
+}

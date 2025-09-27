@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Admin CRUD with GraphQL</title>
+  <style>
+    table { border-collapse: collapse; margin-bottom: 20px; }
+    th, td { border: 1px solid #ccc; padding: 6px 10px; }
+    th { background: #f2f2f2; }
+    form { margin-bottom: 40px; }
+    input, button { margin: 3px; }
+  </style>
+</head>
+<body>
+<h1>Admin CRUD (User - Product - Category)</h1>
+
+<!-- USERS -->
+<h2>Users</h2>
+<table id="userTable">
+  <thead>
+    <tr>
+      <th>ID</th><th>Fullname</th><th>Email</th><th>Phone</th><th>Actions</th>
+    </tr>
+  </thead>
+  <tbody></tbody>
+</table>
+
+<form id="userForm">
+  <input type="hidden" id="userId">
+  <input placeholder="Fullname" id="userFullname" required>
+  <input placeholder="Email" id="userEmail" required>
+  <input placeholder="Password" id="userPassword" type="password" required>
+  <input placeholder="Phone" id="userPhone">
+  <button type="submit">Save User</button>
+</form>
+
+<hr>
+
+<!-- PRODUCTS -->
+<h2>Products</h2>
+<table id="productTable">
+  <thead>
+    <tr>
+      <th>ID</th><th>Title</th><th>Quantity</th><th>Desc</th><th>Price</th><th>Actions</th>
+    </tr>
+  </thead>
+  <tbody></tbody>
+</table>
+
+<form id="productForm">
+  <input type="hidden" id="productId">
+  <input placeholder="Title" id="productTitle" required>
+  <input placeholder="Quantity" id="productQuantity" type="number" required>
+  <input placeholder="Description" id="productDesc">
+  <input placeholder="Price" id="productPrice" type="number" step="0.01" required>
+  <input placeholder="User ID" id="productUserId">
+  <button type="submit">Save Product</button>
+</form>
+
+<hr>
+
+<!-- CATEGORIES -->
+<h2>Categories</h2>
+<table id="categoryTable">
+  <thead>
+    <tr>
+      <th>ID</th><th>Name</th><th>Images</th><th>Actions</th>
+    </tr>
+  </thead>
+  <tbody></tbody>
+</table>
+
+<form id="categoryForm">
+  <input type="hidden" id="categoryId">
+  <input placeholder="Name" id="categoryName" required>
+  <input placeholder="Images" id="categoryImages">
+  <button type="submit">Save Category</button>
+</form>
+
+<script>
+const GRAPHQL_URL = '/graphql';
+
+// Hàm gọi GraphQL
+async function graphql(query, variables={}) {
+  const res = await fetch(GRAPHQL_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ query, variables })
+  });
+  const body = await res.json();
+  return body.data;
+}
+
+/* -------- USERS -------- */
+async function loadUsers() {
+  let data = await graphql(`{ tatCaUser { id fullname email phone } }`);
+  renderUsers(data.tatCaUser);
+}
+function renderUsers(users) {
+  let tbody = document.querySelector("#userTable tbody");
+  tbody.innerHTML = "";
+  users.forEach(u => {
+    tbody.innerHTML += `<tr>
+      <td>${u.id}</td><td>${u.fullname}</td><td>${u.email}</td><td>${u.phone || ""}</td>
+      <td>
+        <button onclick="editUser(${u.id}, '${u.fullname}', '${u.email}', '${u.phone || ""}')">Edit</button>
+        <button onclick="deleteUser(${u.id})">Delete</button>
+      </td>
+    </tr>`;
+  });
+}
+function editUser(id, fullname, email, phone) {
+  document.getElementById("userId").value = id;
+  document.getElementById("userFullname").value = fullname;
+  document.getElementById("userEmail").value = email;
+  document.getElementById("userPhone").value = phone;
+}
+document.getElementById("userForm").onsubmit = async e => {
+  e.preventDefault();
+  let id = document.getElementById("userId").value;
+  let fullname = document.getElementById("userFullname").value;
+  let email = document.getElementById("userEmail").value;
+  let password = document.getElementById("userPassword").value;
+  let phone = document.getElementById("userPhone").value;
+  if (id) {
+    await graphql(
+      `mutation($id:ID!,$fullname:String!,$email:String!,$password:String!,$phone:String!){
+        capNhatUser(id:$id,input:{fullname:$fullname,email:$email,password:$password,phone:$phone}){id}
+      }`,
+      { id, fullname, email, password, phone }
+    );
+  } else {
+    await graphql(
+      `mutation($fullname:String!,$email:String!,$password:String!,$phone:String!){
+        taoUser(input:{fullname:$fullname,email:$email,password:$password,phone:$phone}){id}
+      }`,
+      { fullname, email, password, phone }
+    );
+  }
+  e.target.reset(); loadUsers();
+};
+async function deleteUser(id) {
+  await graphql(`mutation($id:ID!){ xoaUser(id:$id) }`, { id });
+  loadUsers();
+}
+
+/* -------- PRODUCTS -------- */
+async function loadProducts() {
+  let data = await graphql(`{ tatCaProduct { id title quantity desc price } }`);
+  renderProducts(data.tatCaProduct);
+}
+function renderProducts(products) {
+  let tbody = document.querySelector("#productTable tbody");
+  tbody.innerHTML = "";
+  products.forEach(p => {
+    tbody.innerHTML += `<tr>
+      <td>${p.id}</td><td>${p.title}</td><td>${p.quantity}</td><td>${p.desc || ""}</td><td>${p.price}</td>
+      <td>
+        <button onclick="editProduct(${p.id}, '${p.title}', ${p.quantity}, '${p.desc || ""}', ${p.price})">Edit</button>
+        <button onclick="deleteProduct(${p.id})">Delete</button>
+      </td>
+    </tr>`;
+  });
+}
+function editProduct(id, title, quantity, desc, price) {
+  document.getElementById("productId").value = id;
+  document.getElementById("productTitle").value = title;
+  document.getElementById("productQuantity").value = quantity;
+  document.getElementById("productDesc").value = desc;
+  document.getElementById("productPrice").value = price;
+}
+document.getElementById("productForm").onsubmit = async e => {
+  e.preventDefault();
+  let id = document.getElementById("productId").value;
+  let title = document.getElementById("productTitle").value;
+  let quantity = parseInt(document.getElementById("productQuantity").value);
+  let desc = document.getElementById("productDesc").value;
+  let price = parseFloat(document.getElementById("productPrice").value);
+  let userId = document.getElementById("productUserId").value;
+  if (id) {
+    await graphql(
+      `mutation($id:ID!,$title:String!,$quantity:Int!,$desc:String,$price:Float,$userId:ID){
+        capNhatProduct(id:$id,input:{title:$title,quantity:$quantity,desc:$desc,price:$price,userId:$userId}){id}
+      }`,
+      { id, title, quantity, desc, price, userId }
+    );
+  } else {
+    await graphql(
+      `mutation($title:String!,$quantity:Int!,$desc:String,$price:Float,$userId:ID){
+        taoProduct(input:{title:$title,quantity:$quantity,desc:$desc,price:$price,userId:$userId}){id}
+      }`,
+      { title, quantity, desc, price, userId }
+    );
+  }
+  e.target.reset(); loadProducts();
+};
+async function deleteProduct(id) {
+  await graphql(`mutation($id:ID!){ xoaProduct(id:$id) }`, { id });
+  loadProducts();
+}
+
+/* -------- CATEGORIES -------- */
+async function loadCategories() {
+  let data = await graphql(`{ tatCaCategory { id name images } }`);
+  renderCategories(data.tatCaCategory);
+}
+function renderCategories(cats) {
+  let tbody = document.querySelector("#categoryTable tbody");
+  tbody.innerHTML = "";
+  cats.forEach(c => {
+    tbody.innerHTML += `<tr>
+      <td>${c.id}</td><td>${c.name}</td><td>${c.images || ""}</td>
+      <td>
+        <button onclick="editCategory(${c.id}, '${c.name}', '${c.images || ""}')">Edit</button>
+        <button onclick="deleteCategory(${c.id})">Delete</button>
+      </td>
+    </tr>`;
+  });
+}
+function editCategory(id, name, images) {
+  document.getElementById("categoryId").value = id;
+  document.getElementById("categoryName").value = name;
+  document.getElementById("categoryImages").value = images;
+}
+document.getElementById("categoryForm").onsubmit = async e => {
+  e.preventDefault();
+  let id = document.getElementById("categoryId").value;
+  let name = document.getElementById("categoryName").value;
+  let images = document.getElementById("categoryImages").value;
+  if (id) {
+    await graphql(
+      `mutation($id:ID!,$name:String!,$images:String){
+        capNhatCategory(id:$id,input:{name:$name,images:$images}){id}
+      }`,
+      { id, name, images }
+    );
+  } else {
+    await graphql(
+      `mutation($name:String!,$images:String){
+        taoCategory(input:{name:$name,images:$images}){id}
+      }`,
+      { name, images }
+    );
+  }
+  e.target.reset(); loadCategories();
+};
+async function deleteCategory(id) {
+  await graphql(`mutation($id:ID!){ xoaCategory(id:$id) }`, { id });
+  loadCategories();
+}
+
+/* INIT */
+loadUsers();
+loadProducts();
+loadCategories();
+</script>
+</body>
+</html>

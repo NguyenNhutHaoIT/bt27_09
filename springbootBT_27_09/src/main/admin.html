@@ -1,0 +1,198 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Quản trị CRUD - GraphQL + Spring Boot</title>
+  <style>
+    body { font-family: Arial; margin: 20px; }
+    table { border-collapse: collapse; width: 100%; margin-top: 10px; }
+    th, td { border: 1px solid #ccc; padding: 6px; text-align: left; }
+    th { background: #f2f2f2; }
+    input, button { margin: 5px; padding: 5px; }
+  </style>
+</head>
+<body>
+  <h2>Quản trị CRUD (AJAX + GraphQL)</h2>
+
+  <!-- ---------------- USER ---------------- -->
+  <h3>Quản lý User</h3>
+  <form id="formUser">
+    <input type="hidden" id="userId">
+    <input id="userName" placeholder="Fullname">
+    <input id="userEmail" placeholder="Email">
+    <input id="userPass" placeholder="Password" type="password">
+    <input id="userPhone" placeholder="Phone">
+    <button type="submit">Lưu User</button>
+  </form>
+  <table id="tblUser">
+    <thead><tr><th>ID</th><th>Fullname</th><th>Email</th><th>Phone</th><th>Hành động</th></tr></thead>
+    <tbody></tbody>
+  </table>
+
+  <!-- ---------------- CATEGORY ---------------- -->
+  <h3>Quản lý Category</h3>
+  <form id="formCategory">
+    <input type="hidden" id="catId">
+    <input id="catName" placeholder="Name">
+    <input id="catImg" placeholder="Images URL">
+    <button type="submit">Lưu Category</button>
+  </form>
+  <table id="tblCat">
+    <thead><tr><th>ID</th><th>Name</th><th>Images</th><th>Hành động</th></tr></thead>
+    <tbody></tbody>
+  </table>
+
+  <!-- ---------------- PRODUCT ---------------- -->
+  <h3>Quản lý Product</h3>
+  <form id="formProduct">
+    <input type="hidden" id="proId">
+    <input id="proTitle" placeholder="Title">
+    <input id="proQty" placeholder="Quantity" type="number">
+    <input id="proDesc" placeholder="Description">
+    <input id="proPrice" placeholder="Price" type="number" step="0.01">
+    <input id="proUserId" placeholder="UserId">
+    <button type="submit">Lưu Product</button>
+  </form>
+  <table id="tblPro">
+    <thead><tr><th>ID</th><th>Title</th><th>Price</th><th>Qty</th><th>Người bán</th><th>Hành động</th></tr></thead>
+    <tbody></tbody>
+  </table>
+
+<script>
+async function gql(query, variables={}) {
+  const res = await fetch('/graphql', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ query, variables })
+  });
+  return res.json();
+}
+
+// ============ USER ============
+async function loadUsers() {
+  const q=`{ tat_ca_user { id fullname email phone } }`;
+  const r = await gql(q);
+  const tbody=document.querySelector("#tblUser tbody"); tbody.innerHTML="";
+  r.data.tat_ca_user.forEach(u=>{
+    let tr=document.createElement("tr");
+    tr.innerHTML=`<td>${u.id}</td><td>${u.fullname}</td><td>${u.email}</td><td>${u.phone||''}</td>
+    <td>
+      <button onclick="editUser(${u.id},'${u.fullname}','${u.email}','${u.phone||''}')">Sửa</button>
+      <button onclick="delUser(${u.id})">Xóa</button>
+    </td>`;
+    tbody.appendChild(tr);
+  });
+}
+async function delUser(id){
+  if(!confirm("Xóa user?")) return;
+  await gql(`mutation($id:ID!){ xoa_user(id:$id) }`,{id});
+  loadUsers();
+}
+function editUser(id,fn,em,ph){
+  document.getElementById("userId").value=id;
+  document.getElementById("userName").value=fn;
+  document.getElementById("userEmail").value=em;
+  document.getElementById("userPhone").value=ph;
+}
+document.getElementById("formUser").onsubmit=async e=>{
+  e.preventDefault();
+  let id=document.getElementById("userId").value;
+  let input={ fullname:document.getElementById("userName").value,
+              email:document.getElementById("userEmail").value,
+              password:document.getElementById("userPass").value||"123",
+              phone:document.getElementById("userPhone").value };
+  if(id)
+    await gql(`mutation($id:ID!,$input:UserInput!){ cap_nhat_user(id:$id,input:$input){id} }`,{id:Number(id),input});
+  else
+    await gql(`mutation($input:UserInput!){ tao_user(input:$input){id} }`,{input});
+  e.target.reset();
+  loadUsers();
+};
+
+// ============ CATEGORY ============
+async function loadCats() {
+  const q=`{ tat_ca_category { id name images } }`;
+  const r = await gql(q);
+  const tbody=document.querySelector("#tblCat tbody"); tbody.innerHTML="";
+  r.data.tat_ca_category.forEach(c=>{
+    let tr=document.createElement("tr");
+    tr.innerHTML=`<td>${c.id}</td><td>${c.name}</td><td>${c.images||''}</td>
+    <td>
+      <button onclick="editCat(${c.id},'${c.name}','${c.images||''}')">Sửa</button>
+      <button onclick="delCat(${c.id})">Xóa</button>
+    </td>`;
+    tbody.appendChild(tr);
+  });
+}
+async function delCat(id){
+  if(!confirm("Xóa category?")) return;
+  await gql(`mutation($id:ID!){ xoa_category(id:$id) }`,{id});
+  loadCats();
+}
+function editCat(id,nm,img){
+  document.getElementById("catId").value=id;
+  document.getElementById("catName").value=nm;
+  document.getElementById("catImg").value=img;
+}
+document.getElementById("formCategory").onsubmit=async e=>{
+  e.preventDefault();
+  let id=document.getElementById("catId").value;
+  let input={ name:document.getElementById("catName").value,
+              images:document.getElementById("catImg").value };
+  if(id)
+    await gql(`mutation($id:ID!,$input:CategoryInput!){ cap_nhat_category(id:$id,input:$input){id} }`,{id:Number(id),input});
+  else
+    await gql(`mutation($input:CategoryInput!){ tao_category(input:$input){id} }`,{input});
+  e.target.reset();
+  loadCats();
+};
+
+// ============ PRODUCT ============
+async function loadPro() {
+  const q=`{ tat_ca_product { id title price quantity nguoi_ban { id fullname } } }`;
+  const r = await gql(q);
+  const tbody=document.querySelector("#tblPro tbody"); tbody.innerHTML="";
+  r.data.tat_ca_product.forEach(p=>{
+    let tr=document.createElement("tr");
+    tr.innerHTML=`<td>${p.id}</td><td>${p.title}</td><td>${p.price}</td><td>${p.quantity||0}</td>
+    <td>${p.nguoi_ban ? p.nguoi_ban.fullname : ''}</td>
+    <td>
+      <button onclick="editPro(${p.id},'${p.title}',${p.price},${p.quantity||0},${p.nguoi_ban? p.nguoi_ban.id:0})">Sửa</button>
+      <button onclick="delPro(${p.id})">Xóa</button>
+    </td>`;
+    tbody.appendChild(tr);
+  });
+}
+async function delPro(id){
+  if(!confirm("Xóa product?")) return;
+  await gql(`mutation($id:ID!){ xoa_product(id:$id) }`,{id});
+  loadPro();
+}
+function editPro(id,tt,pr,qt,uid){
+  document.getElementById("proId").value=id;
+  document.getElementById("proTitle").value=tt;
+  document.getElementById("proPrice").value=pr;
+  document.getElementById("proQty").value=qt;
+  document.getElementById("proUserId").value=uid||'';
+}
+document.getElementById("formProduct").onsubmit=async e=>{
+  e.preventDefault();
+  let id=document.getElementById("proId").value;
+  let input={ title:document.getElementById("proTitle").value,
+              price:parseFloat(document.getElementById("proPrice").value),
+              quantity:parseInt(document.getElementById("proQty").value||0),
+              desc:document.getElementById("proDesc").value,
+              userId: document.getElementById("proUserId").value? Number(document.getElementById("proUserId").value): null };
+  if(id)
+    await gql(`mutation($id:ID!,$input:ProductInput!){ cap_nhat_product(id:$id,input:$input){id} }`,{id:Number(id),input});
+  else
+    await gql(`mutation($input:ProductInput!){ tao_product(input:$input){id} }`,{input});
+  e.target.reset();
+  loadPro();
+};
+
+// Load khi mở trang
+loadUsers(); loadCats(); loadPro();
+</script>
+</body>
+</html>
